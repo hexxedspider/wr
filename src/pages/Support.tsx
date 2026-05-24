@@ -94,7 +94,7 @@ export function SupportPage() {
           <div className="pt-6">
             <Button
               className="py px-4 box-content bg-buttons-secondary hover:bg-buttons-secondaryHover bg-opacity-90 text-buttons-secondaryText justify-center items-center inline-block"
-              onClick={() => window.open(conf().CODEBERG_LINK, "_blank")}
+              onClick={() => window.open(conf().GITHUB_LINK, "_blank")}
             >
               WeirdRyn Code
             </Button>
@@ -109,7 +109,7 @@ export function SupportPage() {
             </Item>,
             <Item title={t("support.q2.title")}>
               <Trans i18nKey="support.q2.body">
-                <MwLink to={conf().CODEBERG_LINK} />
+                <MwLink to={conf().GITHUB_LINK} />
               </Trans>
             </Item>,
           ]}

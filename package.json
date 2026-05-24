@@ -3,7 +3,7 @@
   "name": "weirdryn",
   "version": "1.0.0",
   "private": true,
-  "homepage": "https://codeberg.org/hexxedspider/weirdryn",
+  "homepage": "https://github.com/hexxedspider/wr",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
