@@ -160,24 +160,30 @@
     "titles": {
       "day": {
         "default": "What would you like to watch this afternoon?",
-        "extra": ["Have you seen Blazing Saddles?"],
-        "extra": ["Welcome to WeirdRyn!"],
-        "extra": [" /ᐠ>ヮ<ᐟ\\ฅ"],
-        "extra": ["Viva la WeirdRyn!"]
+        "extra": [
+          "Have you seen Blazing Saddles?",
+          "Welcome to WeirdRyn!",
+          " /ᐠ>ヮ<ᐟ\\ฅ",
+          "Viva la WeirdRyn!"
+        ]
       },
       "morning": {
         "default": "What would you like to watch this morning?",
-        "extra": ["Can't go wrong with Friends"],
-        "extra": ["I hear The Expanse is popular"],
-        "extra": ["\"૮₍  ˶•⤙•˶ ₎ა"],
-        "extra": ["Viva la WeirdRyn!"]
+        "extra": [
+          "Can't go wrong with Friends",
+          "I hear The Expanse is popular",
+          "\"૮₍  ˶•⤙•˶ ₎ა",
+          "Viva la WeirdRyn!"
+        ]
       },
       "night": {
         "default": "What would you like to watch tonight?",
-        "extra": ["Rick & Morty is great with friends!"],
-        "extra": ["Go smoke and watch The Simpsons!"],
-        "extra": ["(づ ᴗ _ᴗ)づ♡"],
-        "extra": ["Viva la WeirdRyn!"]
+        "extra": [
+          "Rick & Morty is great with friends!",
+          "Go smoke and watch The Simpsons!",
+          "(づ ᴗ _ᴗ)づ♡",
+          "Viva la WeirdRyn!"
+        ]
       },
       "420": {
         "default": "What would you like to watch this 4/20?",
