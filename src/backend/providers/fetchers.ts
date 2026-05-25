@@ -1,8 +1,12 @@
-import { Fetcher, makeSimpleProxyFetcher } from "@movie-web/providers";
+import {
+  Fetcher,
+  makeSimpleProxyFetcher,
+  setM3U8ProxyUrl,
+} from "@WeirdRyn/providers";
 
 import { sendExtensionRequest } from "@/backend/extension/messaging";
 import { getApiToken, setApiToken } from "@/backend/helpers/providerApi";
-import { getProviderApiUrls, getProxyUrls } from "@/utils/proxyUrls";
+import { getM3U8ProxyUrls, getProxyUrls } from "@/utils/proxyUrls";
 
 import { convertBodyToObject, getBodyTypeFromBody } from "../extension/request";
 
@@ -20,8 +24,27 @@ function makeLoadbalancedList(getter: () => string[]) {
 }
 
 export const getLoadbalancedProxyUrl = makeLoadbalancedList(getProxyUrls);
-export const getLoadbalancedProviderApiUrl =
-  makeLoadbalancedList(getProviderApiUrls);
+function getEnabledM3U8ProxyUrls() {
+  const allM3U8ProxyUrls = getM3U8ProxyUrls();
+  const enabledProxies = localStorage.getItem("m3u8-proxy-enabled");
+
+  if (!enabledProxies) {
+    return allM3U8ProxyUrls;
+  }
+
+  try {
+    const enabled = JSON.parse(enabledProxies);
+    return allM3U8ProxyUrls.filter(
+      (_url, index) => enabled[index.toString()] !== false,
+    );
+  } catch {
+    return allM3U8ProxyUrls;
+  }
+}
+
+export const getLoadbalancedM3U8ProxyUrl = makeLoadbalancedList(
+  getEnabledM3U8ProxyUrls,
+);
 
 async function fetchButWithApiTokens(
   input: RequestInfo | URL,
@@ -42,6 +65,13 @@ async function fetchButWithApiTokens(
   const newApiToken = response.headers.get("X-Token");
   if (newApiToken) setApiToken(newApiToken);
   return response;
+}
+
+export function setupM3U8Proxy() {
+  const proxyUrl = getLoadbalancedM3U8ProxyUrl();
+  if (proxyUrl) {
+    setM3U8ProxyUrl(proxyUrl);
+  }
 }
 
 export function makeLoadBalancedSimpleProxyFetcher() {
@@ -86,3 +116,4 @@ export function makeExtensionFetcher() {
   };
   return fetcher;
 }
+

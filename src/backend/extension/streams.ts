@@ -1,4 +1,4 @@
-import { Stream } from "@movie-web/providers";
+import { Stream } from "@WeirdRyn/providers";
 
 import { RULE_IDS, setDomainRule } from "@/backend/extension/messaging";
 
@@ -41,3 +41,4 @@ export async function prepareStream(stream: Stream) {
     requestHeaders: buildHeadersFromStream(stream),
   });
 }
+

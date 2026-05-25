@@ -2,11 +2,13 @@ import { useCallback, useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useCopyToClipboard } from "react-use";
 
+import { downloadCaption } from "@/backend/helpers/subs";
 import { Button } from "@/components/buttons/Button";
 import { Icon, Icons } from "@/components/Icon";
 import { OverlayPage } from "@/components/overlays/OverlayPage";
 import { Menu } from "@/components/player/internals/ContextMenu";
 import { convertSubtitlesToSrtDataurl } from "@/components/player/utils/captions";
+import { useIsDesktopApp } from "@/hooks/useIsDesktopApp";
 import { useOverlayRouter } from "@/hooks/useOverlayRouter";
 import { usePlayerStore } from "@/stores/player/store";
 
@@ -14,10 +16,17 @@ export function useDownloadLink() {
   const source = usePlayerStore((s) => s.source);
   const currentQuality = usePlayerStore((s) => s.currentQuality);
   const url = useMemo(() => {
-    if (source?.type === "file" && currentQuality)
-      return source.qualities[currentQuality]?.url ?? null;
+    if (source?.type === "file") {
+      const quality = currentQuality
+        ? source.qualities[currentQuality]
+        : undefined;
+      if (quality) return quality.url;
+      // Fallback to the first available quality if currentQuality is not set
+      const firstQuality = Object.values(source.qualities)[0];
+      return firstQuality?.url;
+    }
     if (source?.type === "hls") return source.url;
-    return null;
+    return undefined;
   }, [source, currentQuality]);
   return url;
 }
@@ -44,10 +53,83 @@ export function DownloadView({ id }: { id: string }) {
   const router = useOverlayRouter(id);
   const { t } = useTranslation();
   const downloadUrl = useDownloadLink();
+
+  // Custom function to process the download URL
+  const processDownloadUrl = useCallback(() => {
+    if (!downloadUrl) return "";
+
+    // Check if the URL contains the m3u8-proxy and the ?url= parameter
+    const match = downloadUrl.match(/m3u8-proxy\?url=(.*)$/);
+    if (match && match[1]) {
+      // Decode the URL component
+      return decodeURIComponent(match[1]);
+    }
+
+    return downloadUrl; // Return original if no specific pattern is found
+  }, [downloadUrl]);
+
+  const hlsDownload = `https://hls-downloader.pstream.mov/?url=${encodeURIComponent(processDownloadUrl())}`;
   const [, copyToClipboard] = useCopyToClipboard();
 
   const sourceType = usePlayerStore((s) => s.source?.type);
   const selectedCaption = usePlayerStore((s) => s.caption?.selected);
+  const captionList = usePlayerStore((s) => s.captionList);
+  const meta = usePlayerStore((s) => s.meta);
+  const duration = usePlayerStore((s) => s.progress.duration);
+  const source = usePlayerStore((s) => s.source);
+  const isDesktopApp = useIsDesktopApp();
+
+  const startOfflineDownload = useCallback(async () => {
+    if (!downloadUrl) return;
+    const title = meta?.title ? meta.title : t("player.menus.downloads.title");
+    const poster = meta?.poster;
+    let subtitleText: string | undefined;
+
+    if (selectedCaption?.srtData) {
+      subtitleText = selectedCaption.srtData;
+    } else if (captionList.length > 0) {
+      // Auto-fetch the first English caption, or the first available one
+      const defaultCaption =
+        captionList.find((c) => c.language === "en") ?? captionList[0];
+      try {
+        subtitleText = await downloadCaption(defaultCaption);
+      } catch {
+        // Continue without subtitles if fetch fails
+      }
+    }
+
+    const headers = {
+      ...(source?.headers ?? {}),
+      ...(source?.preferredHeaders ?? {}),
+    };
+
+    window.desktopApi?.startDownload({
+      url: downloadUrl,
+      title,
+      poster,
+      subtitleText,
+      duration,
+      type: sourceType,
+      headers,
+    });
+
+    if (window.desktopApi?.openOffline) {
+      window.desktopApi.openOffline();
+    } else {
+      router.navigate("/");
+    }
+  }, [
+    downloadUrl,
+    meta,
+    selectedCaption,
+    captionList,
+    duration,
+    router,
+    source,
+    sourceType,
+    t,
+  ]);
+
   const openSubtitleDownload = useCallback(() => {
     const dataUrl = selectedCaption
       ? convertSubtitlesToSrtDataurl(selectedCaption?.srtData)
@@ -56,30 +138,64 @@ export function DownloadView({ id }: { id: string }) {
     window.open(dataUrl);
   }, [selectedCaption]);
 
-  if (!downloadUrl) return null;
-
   return (
     <>
       <Menu.BackLink onClick={() => router.navigate("/")}>
         {t("player.menus.downloads.title")}
       </Menu.BackLink>
       <Menu.Section>
-        <div>
+        <div className="mb-4">
           {sourceType === "hls" ? (
-            <>
-              <Menu.Paragraph marginClass="mb-6">
-                <StyleTrans k="player.menus.downloads.hlsDisclaimer" />
-              </Menu.Paragraph>
+            <div className="mb-6">
+              {isDesktopApp ? (
+                <>
+                  <Menu.Paragraph marginClass="mb-6">
+                    <StyleTrans k="player.menus.downloads.disclaimer" />
+                  </Menu.Paragraph>
 
+                  <Menu.Paragraph marginClass="mb-6">
+                    <Trans i18nKey="player.menus.downloads.desktopDisclaimer" />
+                  </Menu.Paragraph>
+                  <Button
+                    className="w-full mt-2"
+                    theme="purple"
+                    onClick={startOfflineDownload}
+                  >
+                    {t("player.menus.downloads.offlineButton")}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Menu.Paragraph marginClass="mb-6">
+                    <StyleTrans k="player.menus.downloads.hlsDisclaimer" />
+                  </Menu.Paragraph>
+
+                  <Button
+                    className="w-full mt-2"
+                    theme="purple"
+                    href={hlsDownload}
+                  >
+                    {t("player.menus.downloads.button")}
+                  </Button>
+                  <p className="text-xs py-4">
+                    <Trans i18nKey="player.menus.downloads.hlsDownloader">
+                      <a
+                        className="text-type-link"
+                        href="https://hls-downloader.pstream.mov/"
+                      />
+                    </Trans>
+                  </p>
+                </>
+              )}
               <Button
-                className="w-full"
-                theme="purple"
+                className="w-full mt-2"
+                theme="secondary"
                 href={downloadUrl}
                 onClick={(event) => {
                   // Allow context menu & left click to copy
                   event.preventDefault();
 
-                  copyToClipboard(downloadUrl);
+                  copyToClipboard(downloadUrl ?? "");
                 }}
               >
                 {t("player.menus.downloads.copyHlsPlaylist")}
@@ -92,7 +208,60 @@ export function DownloadView({ id }: { id: string }) {
               >
                 {t("player.menus.downloads.downloadSubtitle")}
               </Button>
-            </>
+            </div>
+          ) : sourceType === "file" ? (
+            <div className="mb-6">
+              {isDesktopApp ? (
+                <>
+                  <Menu.Paragraph marginClass="mb-6">
+                    <Trans i18nKey="player.menus.downloads.desktopDisclaimer" />
+                  </Menu.Paragraph>
+                  <Button
+                    className="w-full mt-2"
+                    theme="purple"
+                    onClick={startOfflineDownload}
+                  >
+                    {t("player.menus.downloads.offlineButton")}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Menu.ChevronLink
+                    onClick={() => router.navigate("/download/pc")}
+                  >
+                    {t("player.menus.downloads.onPc.title")}
+                  </Menu.ChevronLink>
+                  <Menu.ChevronLink
+                    onClick={() => router.navigate("/download/ios")}
+                  >
+                    {t("player.menus.downloads.onIos.title")}
+                  </Menu.ChevronLink>
+                  <Menu.ChevronLink
+                    onClick={() => router.navigate("/download/android")}
+                  >
+                    {t("player.menus.downloads.onAndroid.title")}
+                  </Menu.ChevronLink>
+
+                  <Menu.Divider />
+
+                  <Menu.Paragraph marginClass="my-6">
+                    <StyleTrans k="player.menus.downloads.disclaimer" />
+                  </Menu.Paragraph>
+                  <Button className="w-full" href={downloadUrl} theme="purple">
+                    {t("player.menus.downloads.downloadVideo")}
+                  </Button>
+                </>
+              )}
+              <Button
+                className="w-full mt-2"
+                onClick={openSubtitleDownload}
+                disabled={!selectedCaption}
+                theme="secondary"
+                download="subtitles.srt"
+              >
+                {t("player.menus.downloads.downloadSubtitle")}
+              </Button>
+            </div>
           ) : (
             <>
               <Menu.ChevronLink onClick={() => router.navigate("/download/pc")}>
@@ -114,7 +283,6 @@ export function DownloadView({ id }: { id: string }) {
               <Menu.Paragraph marginClass="my-6">
                 <StyleTrans k="player.menus.downloads.disclaimer" />
               </Menu.Paragraph>
-
               <Button className="w-full" href={downloadUrl} theme="purple">
                 {t("player.menus.downloads.downloadVideo")}
               </Button>

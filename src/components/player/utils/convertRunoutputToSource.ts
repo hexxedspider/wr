@@ -1,4 +1,4 @@
-import { Stream } from "@movie-web/providers";
+import { Stream } from "@WeirdRyn/providers";
 
 import {
   SourceFileStream,
@@ -57,3 +57,4 @@ export function convertRunoutputToSource(out: {
   }
   throw new Error("unrecognized type");
 }
+

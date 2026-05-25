@@ -1,5 +1,8 @@
 import { FetchError } from "ofetch";
 
+import { useLanguageStore } from "@/stores/language";
+import { getTmdbLanguageCode } from "@/utils/language";
+
 import { formatJWMeta, mediaTypeToJW } from "./justwatch";
 import {
   TMDBIdToUrlId,
@@ -44,6 +47,7 @@ export function formatTMDBMetaResult(
       object_type: mediaTypeToTMDB(type),
       poster: getMediaPoster(movie.poster_path) ?? undefined,
       original_release_date: new Date(movie.release_date),
+      overview: movie.overview || undefined,
     };
   }
   if (type === MWMediaType.SERIES) {
@@ -59,6 +63,7 @@ export function formatTMDBMetaResult(
       })),
       poster: getMediaPoster(show.poster_path) ?? undefined,
       original_release_date: new Date(show.first_air_date),
+      overview: show.overview,
     };
   }
 
@@ -119,10 +124,13 @@ export async function getLegacyMetaFromId(
   seasonId?: string,
 ): Promise<DetailedMeta | null> {
   const queryType = mediaTypeToJW(type);
+  const userLanguage = useLanguageStore.getState().language;
+  const formattedLanguage = getTmdbLanguageCode(userLanguage);
+  const locale = formattedLanguage.replace("-", "_");
 
   let data: JWDetailedMeta;
   try {
-    const url = makeUrl("/content/titles/{type}/{id}/locale/en_US", {
+    const url = makeUrl(`/content/titles/{type}/{id}/locale/${locale}`, {
       type: queryType,
       id,
     });
@@ -150,7 +158,7 @@ export async function getLegacyMetaFromId(
   let seasonData: JWSeasonMetaResult | undefined;
   if (data.object_type === "show") {
     const seasonToScrape = seasonId ?? data.seasons?.[0].id.toString() ?? "";
-    const url = makeUrl("/content/titles/show_season/{id}/locale/en_US", {
+    const url = makeUrl(`/content/titles/show_season/{id}/locale/${locale}`, {
       id: seasonToScrape,
     });
     seasonData = await proxiedFetch<any>(url, { baseURL: JW_API_BASE });

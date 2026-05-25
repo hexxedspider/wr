@@ -19,6 +19,8 @@ export type MWSeasonWithEpisodeMeta = {
     number: number;
     title: string;
     air_date: string;
+    still_path: string | null;
+    overview: string;
   }[];
 };
 
@@ -27,6 +29,7 @@ type MWMediaMetaBase = {
   id: string;
   year?: string;
   poster?: string;
+  overview?: string;
 };
 
 type MWMediaMetaSpecific =
