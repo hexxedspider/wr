@@ -10,11 +10,12 @@
     "build": "vite build",
     "build:pwa": "cross-env VITE_PWA_ENABLED=true vite build",
     "test": "vitest run",
-    "preview": "vite preview",
+    "preview": "pnpm run build && wrangler dev",
     "lint": "eslint --ext .tsx,.ts src",
     "lint:fix": "eslint --fix --ext .tsx,.ts src",
     "lint:report": "eslint --ext .tsx,.ts --output-file eslint_report.json --format json src",
-    "preinstall": "npx -y only-allow pnpm"
+    "preinstall": "npx -y only-allow pnpm",
+    "deploy": "pnpm run build && wrangler deploy"
   },
   "browserslist": {
     "production": [
@@ -81,6 +82,7 @@
     "@babel/core": "^7.27.1",
     "@babel/preset-env": "^7.27.2",
     "@babel/preset-typescript": "^7.27.1",
+    "@cloudflare/vite-plugin": "^1.38.0",
     "@rollup/wasm-node": "^4.40.2",
     "@types/chromecast-caf-sender": "^1.0.11",
     "@types/crypto-js": "^4.2.2",
@@ -134,7 +136,8 @@
     "vite-plugin-pwa": "^0.21.1",
     "vite-plugin-static-copy": "^2.0.0",
     "vitest": "^1.6.1",
-    "workbox-window": "^7.3.0"
+    "workbox-window": "^7.3.0",
+    "wrangler": "^4.94.0"
   },
   "pnpm": {
     "overrides": {
